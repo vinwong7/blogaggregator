@@ -76,3 +76,32 @@ func handlerRegister(s *state, cmd command) error {
 
 	return nil
 }
+
+func handlerReset(s *state, cmd command) error {
+
+	err := s.db.Reset(context.Background())
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("User database has been reset.")
+	return nil
+}
+
+func handlerUserList(s *state, cmd command) error {
+
+	userList, err := s.db.UserList(context.Background())
+	if err != nil {
+		return err
+	}
+
+	for _, user := range userList {
+		if user == s.cfg_ptr.Current_user_name {
+			fmt.Printf("%v (current)\n", user)
+		} else {
+			fmt.Printf("%v\n", user)
+		}
+	}
+
+	return nil
+}
