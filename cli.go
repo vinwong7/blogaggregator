@@ -116,3 +116,51 @@ func handlerAgg(s *state, cmd command) error {
 
 	return nil
 }
+
+func handlerAddFeed(s *state, cmd command) error {
+
+	if len(cmd.arguments) < 2 {
+		log.Fatal("Missing name of feed or feed URL. Exiting...\n")
+
+	}
+
+	userInfo, err := s.db.GetUser(context.Background(), s.cfg_ptr.Current_user_name)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	s.db.CreateFeed(context.Background(),
+		database.CreateFeedParams{
+			ID:        uuid.New(),
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+			Name:      cmd.arguments[0],
+			Url:       cmd.arguments[1],
+			UserID:    userInfo.ID,
+		},
+	)
+
+	feedData, err := s.db.GetFeed(context.Background(), cmd.arguments[1])
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("Feed has been added to database. Here is the entry.")
+	fmt.Printf("Name: %v, URL: %v\n", feedData.Name, feedData.Url)
+	fmt.Printf("Created_At: %v, UserID: %v\n", feedData.CreatedAt, feedData.UserID)
+
+	return nil
+}
+
+func handlerfeedList(s *state, cmd command) error {
+
+	feedList, err := s.db.FeedList(context.Background())
+	if err != nil {
+		return err
+	}
+
+	for _, feed := range feedList {
+		fmt.Printf("Feed Name: %v, Feed URL: %v, Added By: %v\n", feed.Feedname, feed.Url, feed.Username)
+	}
+
+	return nil
+}
