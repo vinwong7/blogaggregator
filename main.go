@@ -43,10 +43,11 @@ func main() {
 	new_commands.register("reset", handlerReset)
 	new_commands.register("users", handlerUserList)
 	new_commands.register("agg", handlerAgg)
-	new_commands.register("addfeed", handlerAddFeed)
+	new_commands.register("addfeed", middlewareLoggedIn(handlerAddFeed))
 	new_commands.register("feeds", handlerfeedList)
-	new_commands.register("follow", handlerFollow)
-	new_commands.register("following", handlerFollowing)
+	new_commands.register("follow", middlewareLoggedIn(handlerFollow))
+	new_commands.register("following", middlewareLoggedIn(handlerFollowing))
+	new_commands.register("unfollow", middlewareLoggedIn(handlerUnfollow))
 
 	if len(os.Args) < 2 {
 		log.Fatal("Not enought arguments provided. Exiting...\n")

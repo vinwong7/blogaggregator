@@ -117,18 +117,18 @@ func handlerAgg(s *state, cmd command) error {
 	return nil
 }
 
-func handlerAddFeed(s *state, cmd command) error {
+func handlerAddFeed(s *state, cmd command, user database.User) error {
 
 	if len(cmd.arguments) < 2 {
 		log.Fatal("Missing name of feed or feed URL. Exiting...\n")
 
 	}
-
-	userInfo, err := s.db.GetUser(context.Background(), s.cfg_ptr.Current_user_name)
-	if err != nil {
-		log.Fatal(err)
-	}
-
+	/*
+		userInfo, err := s.db.GetUser(context.Background(), s.cfg_ptr.Current_user_name)
+		if err != nil {
+			log.Fatal(err)
+		}
+	*/
 	s.db.CreateFeed(context.Background(),
 		database.CreateFeedParams{
 			ID:        uuid.New(),
@@ -136,7 +136,7 @@ func handlerAddFeed(s *state, cmd command) error {
 			UpdatedAt: time.Now(),
 			Name:      cmd.arguments[0],
 			Url:       cmd.arguments[1],
-			UserID:    userInfo.ID,
+			UserID:    user.ID,
 		},
 	)
 
@@ -153,7 +153,7 @@ func handlerAddFeed(s *state, cmd command) error {
 			ID:        uuid.New(),
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
-			UserID:    userInfo.ID,
+			UserID:    user.ID,
 			FeedID:    feedData.ID,
 		})
 
@@ -174,17 +174,19 @@ func handlerfeedList(s *state, cmd command) error {
 	return nil
 }
 
-func handlerFollow(s *state, cmd command) error {
+func handlerFollow(s *state, cmd command, user database.User) error {
 
 	if len(cmd.arguments) < 1 {
 		log.Fatal("Missing feed URL. Exiting...\n")
 
 	}
 
-	userInfo, err := s.db.GetUser(context.Background(), s.cfg_ptr.Current_user_name)
-	if err != nil {
-		log.Fatal(err)
-	}
+	/*
+		userInfo, err := s.db.GetUser(context.Background(), s.cfg_ptr.Current_user_name)
+		if err != nil {
+			log.Fatal(err)
+		}
+	*/
 
 	feedInfo, err := s.db.GetFeed(context.Background(), cmd.arguments[0])
 	if err != nil {
@@ -196,7 +198,7 @@ func handlerFollow(s *state, cmd command) error {
 			ID:        uuid.New(),
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
-			UserID:    userInfo.ID,
+			UserID:    user.ID,
 			FeedID:    feedInfo.ID,
 		},
 	)
@@ -209,9 +211,9 @@ func handlerFollow(s *state, cmd command) error {
 	return nil
 }
 
-func handlerFollowing(s *state, cmd command) error {
+func handlerFollowing(s *state, cmd command, user database.User) error {
 
-	feedFollowData, err := s.db.GetFeedFollowsForUser(context.Background(), s.cfg_ptr.Current_user_name)
+	feedFollowData, err := s.db.GetFeedFollowsForUser(context.Background(), user.Name)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -222,4 +224,40 @@ func handlerFollowing(s *state, cmd command) error {
 	}
 
 	return nil
+}
+
+func handlerUnfollow(s *state, cmd command, user database.User) error {
+	if len(cmd.arguments) < 1 {
+		log.Fatal("Missing feed URL. Exiting...\n")
+
+	}
+
+	feedInfo, err := s.db.GetFeed(context.Background(), cmd.arguments[0])
+	if err != nil {
+		log.Fatal(err)
+
+	}
+
+	err = s.db.Unfollow(context.Background(),
+		database.UnfollowParams{
+			FeedID: feedInfo.ID,
+			UserID: user.ID,
+		})
+	if err != nil {
+		log.Fatal(err)
+
+	}
+	return nil
+}
+
+func middlewareLoggedIn(handler func(s *state, cmd command, user database.User) error) func(*state, command) error {
+
+	return func(s *state, cmd command) error {
+		userInfo, err := s.db.GetUser(context.Background(), s.cfg_ptr.Current_user_name)
+		if err != nil {
+			log.Fatal(err)
+		}
+		return handler(s, cmd, userInfo)
+
+	}
 }
