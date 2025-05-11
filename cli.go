@@ -148,6 +148,15 @@ func handlerAddFeed(s *state, cmd command) error {
 	fmt.Printf("Name: %v, URL: %v\n", feedData.Name, feedData.Url)
 	fmt.Printf("Created_At: %v, UserID: %v\n", feedData.CreatedAt, feedData.UserID)
 
+	s.db.CreateFeedFollow(context.Background(),
+		database.CreateFeedFollowParams{
+			ID:        uuid.New(),
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+			UserID:    userInfo.ID,
+			FeedID:    feedData.ID,
+		})
+
 	return nil
 }
 
@@ -160,6 +169,56 @@ func handlerfeedList(s *state, cmd command) error {
 
 	for _, feed := range feedList {
 		fmt.Printf("Feed Name: %v, Feed URL: %v, Added By: %v\n", feed.Feedname, feed.Url, feed.Username)
+	}
+
+	return nil
+}
+
+func handlerFollow(s *state, cmd command) error {
+
+	if len(cmd.arguments) < 1 {
+		log.Fatal("Missing feed URL. Exiting...\n")
+
+	}
+
+	userInfo, err := s.db.GetUser(context.Background(), s.cfg_ptr.Current_user_name)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	feedInfo, err := s.db.GetFeed(context.Background(), cmd.arguments[0])
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	feedFollowData, err := s.db.CreateFeedFollow(context.Background(),
+		database.CreateFeedFollowParams{
+			ID:        uuid.New(),
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+			UserID:    userInfo.ID,
+			FeedID:    feedInfo.ID,
+		},
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("Current user, %v, now following feed, %v\n", feedFollowData.UserName, feedFollowData.FeedName)
+
+	return nil
+}
+
+func handlerFollowing(s *state, cmd command) error {
+
+	feedFollowData, err := s.db.GetFeedFollowsForUser(context.Background(), s.cfg_ptr.Current_user_name)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	println("You are following these feeds currently:")
+	for _, feed := range feedFollowData {
+		fmt.Printf("%v\n", feed.FeedName)
 	}
 
 	return nil
