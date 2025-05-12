@@ -106,17 +106,6 @@ func handlerUserList(s *state, cmd command) error {
 	return nil
 }
 
-func handlerAgg(s *state, cmd command) error {
-
-	feedStruct, err := fetchFeed(context.Background(), "https://www.wagslane.dev/index.xml")
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("%v\n", *feedStruct)
-
-	return nil
-}
-
 func handlerAddFeed(s *state, cmd command, user database.User) error {
 
 	if len(cmd.arguments) < 2 {

@@ -3,7 +3,10 @@ package main
 import (
 	"context"
 	"encoding/xml"
+	"fmt"
 	"html"
+	"log"
+	"time"
 
 	"io"
 	"net/http"
@@ -60,4 +63,45 @@ func fetchFeed(ctx context.Context, feedURL string) (*RSSFeed, error) {
 	}
 
 	return &feed, nil
+}
+
+func scrapeFeeds(s *state, _ command) error {
+	//Fetch next feed based on earliest last_fetched_dt
+	nextFeed, err := s.db.GetNextFeedtoFetch(context.Background())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	//Mark feed as fetched by updating last_fetched_dt
+	err = s.db.MarkFeedFetched(context.Background(), nextFeed.ID)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	//Fetch feed using URL
+	rssFeed, err := fetchFeed(context.Background(), nextFeed.Url)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, item := range (*rssFeed).Channel.Item {
+		fmt.Printf("%v\n", item.Title)
+	}
+
+	return nil
+}
+
+func handlerAgg(s *state, cmd command) error {
+
+	time_between_reqs := 30 * time.Second
+
+	ticker := time.NewTicker(time_between_reqs)
+
+	fmt.Println("Collecting feeds every 30 secs...")
+
+	for ; ; <-ticker.C {
+		scrapeFeeds(s, cmd)
+		fmt.Println("....................")
+	}
+
 }
