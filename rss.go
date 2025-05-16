@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"encoding/xml"
 	"fmt"
 	"html"
@@ -10,6 +11,9 @@ import (
 
 	"io"
 	"net/http"
+
+	"github.com/google/uuid"
+	"github.com/vinwong7/blogaggregator/internal/database"
 )
 
 type RSSFeed struct {
@@ -85,7 +89,52 @@ func scrapeFeeds(s *state, _ command) error {
 	}
 
 	for _, item := range (*rssFeed).Channel.Item {
-		fmt.Printf("%v\n", item.Title)
+
+		var nullTitle bool
+		var nullDescription bool
+		var nullPublishedAt bool
+
+		if item.Title == "" {
+			nullTitle = false
+		} else {
+			nullTitle = true
+		}
+		if item.Description == "" {
+			nullDescription = false
+		} else {
+			nullDescription = true
+		}
+		if item.PubDate == "" {
+			nullPublishedAt = false
+		} else {
+			nullPublishedAt = true
+		}
+
+		parsedDate, err := time.Parse("Mon, 02 Jan 2006 15:04:05 -0700", item.PubDate)
+		if err != nil {
+			fmt.Printf("Time Parse failed. Here is the date: %v\n", item.PubDate)
+			continue
+		}
+
+		itemTitle := sql.NullString{String: item.Title, Valid: nullTitle}
+		itemDescription := sql.NullString{String: item.Description, Valid: nullDescription}
+		itemPublishedAt := sql.NullTime{Time: parsedDate, Valid: nullPublishedAt}
+
+		_, err = s.db.CreatePost(context.Background(),
+			database.CreatePostParams{
+				ID:          uuid.New(),
+				CreatedAt:   time.Now(),
+				UpdatedAt:   time.Now(),
+				Title:       itemTitle,
+				Url:         item.Link,
+				Description: itemDescription,
+				PublishedAt: itemPublishedAt,
+				FeedID:      nextFeed.ID,
+			})
+		if err != nil {
+			log.Println(err)
+		}
+		fmt.Printf("%v: %v\n", rssFeed.Channel.Title, item.Title)
 	}
 
 	return nil
@@ -101,7 +150,8 @@ func handlerAgg(s *state, cmd command) error {
 
 	for ; ; <-ticker.C {
 		scrapeFeeds(s, cmd)
-		fmt.Println("....................")
+		fmt.Println("Looping...")
+
 	}
 
 }

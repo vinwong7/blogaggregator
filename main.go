@@ -48,6 +48,7 @@ func main() {
 	new_commands.register("follow", middlewareLoggedIn(handlerFollow))
 	new_commands.register("following", middlewareLoggedIn(handlerFollowing))
 	new_commands.register("unfollow", middlewareLoggedIn(handlerUnfollow))
+	new_commands.register("browse", middlewareLoggedIn(handlerBrowse))
 
 	if len(os.Args) < 2 {
 		log.Fatal("Not enought arguments provided. Exiting...\n")

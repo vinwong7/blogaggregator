@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -249,4 +250,31 @@ func middlewareLoggedIn(handler func(s *state, cmd command, user database.User) 
 		return handler(s, cmd, userInfo)
 
 	}
+}
+
+func handlerBrowse(s *state, cmd command, user database.User) error {
+
+	postLimit := 2
+	if len(cmd.arguments) > 0 {
+		num, err := strconv.ParseInt(cmd.arguments[0], 10, 0)
+		if err == nil {
+			postLimit = int(num)
+		}
+	}
+
+	postData, err := s.db.GetPostsforUser(context.Background(),
+		database.GetPostsforUserParams{
+			UserID: user.ID,
+			Limit:  int32(postLimit),
+		},
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, post := range postData {
+		fmt.Printf("Post: %v, by %v\n", post.Title.String, post.Name)
+	}
+
+	return nil
 }
